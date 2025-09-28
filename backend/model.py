@@ -35,6 +35,7 @@ class WasteClassifier:
         meta = json.loads(META_FILE.read_text())
         self.class_names: List[str] = meta["class_names"]
         self.category_map: Dict[str, str] = {k.lower(): v for k, v in meta["category_map"].items()}
+        self.fallback_category: str = meta.get("fallback_category", "recycle")
         self.model = self._load_model()
         self.model.to(self.device)
         self.model.eval()
@@ -72,7 +73,9 @@ class WasteClassifier:
     def _map_predictions(self, preds: List[Prediction]) -> Tuple[str, str, float]:
         best = preds[0]
         label = best.label.lower()
-        category = self.category_map.get(label, "trash")
+        category = self.category_map.get(label)
+        if category is None:
+            category = "trash" if label == "trash" else self.fallback_category
         reason = f"Model predicted '{best.label}'"
         return category, reason, best.probability
 

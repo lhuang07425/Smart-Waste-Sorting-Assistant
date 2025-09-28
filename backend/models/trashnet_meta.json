@@ -11,9 +11,10 @@
     "cardboard": "recycle",
     "glass": "recycle",
     "metal": "recycle",
-    "paper": "recycle",
+    "paper": "trash",
     "plastic": "recycle",
     "trash": "trash"
   },
-  "best_val_accuracy": 0.8752475247524752
+  "best_val_accuracy": 0.899009900990099,
+  "fallback_category": "recycle"
 }

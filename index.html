@@ -50,7 +50,6 @@
     }
     .panels {
       background: var(--panel);
-      border-radius: 20px;
       padding: clamp(20px, 4vw, 32px);
       box-shadow: 0 20px 45px -30px rgba(15, 23, 42, 0.45);
       display: flex;
@@ -61,7 +60,6 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       border: 1px solid var(--border);
-      border-radius: 16px;
       overflow: hidden;
     }
     .mode-switch button {
@@ -87,7 +85,6 @@
     }
     .upload-card, .camera-card {
       border: 1px dashed var(--border);
-      border-radius: 16px;
       padding: 18px;
       background: #f9fafb;
       display: flex;
@@ -101,7 +98,6 @@
     }
     .preview {
       width: min(360px, 100%);
-      border-radius: 12px;
       overflow: hidden;
       background: #111827;
       aspect-ratio: 4 / 3;
@@ -135,6 +131,23 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+    button.secondary {
+      background: transparent;
+      color: var(--accent);
+      padding: 12px 18px;
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      width: 100%;
+      max-width: 260px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    button.secondary[aria-pressed="true"] {
+      background: var(--accent);
+      color: white;
+    }
     .result {
       display: flex;
       flex-direction: column;
@@ -146,7 +159,6 @@
       font-size: clamp(2rem, 8vw, 3rem);
       font-weight: 700;
       padding: 10px 26px;
-      border-radius: 20px;
       display: inline-flex;
       align-items: center;
       gap: 16px;
@@ -192,7 +204,6 @@
       color: #64748b;
       background: #e2e8f0;
       padding: 14px 16px;
-      border-radius: 14px;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -240,6 +251,7 @@
             <canvas id="liveCanvas" hidden></canvas>
             <span id="cameraPlaceholder">Camera is off</span>
           </div>
+          <button id="toggleMirror" class="secondary" type="button" aria-pressed="false">Mirror Off</button>
           <button id="startCamera" class="primary">Start Camera</button>
           <button id="analyzeFrame" class="primary" disabled>Analyze Frame</button>
         </div>
@@ -265,6 +277,7 @@
       const API_BASE_URL = (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) || 'http://localhost:8000';
 
       let videoStream;
+      let mirrorEnabled = false;
       const uploadBtn = document.getElementById('uploadModeBtn');
       const cameraBtn = document.getElementById('cameraModeBtn');
       const uploadMode = document.getElementById('uploadMode');
@@ -274,6 +287,7 @@
       const uploadPlaceholder = document.getElementById('uploadPlaceholder');
       const startCameraBtn = document.getElementById('startCamera');
       const analyzeFrameBtn = document.getElementById('analyzeFrame');
+      const toggleMirrorBtn = document.getElementById('toggleMirror');
       const liveVideo = document.getElementById('liveVideo');
       const liveCanvas = document.getElementById('liveCanvas');
       const cameraPlaceholder = document.getElementById('cameraPlaceholder');
@@ -318,6 +332,10 @@
 
       function hideLoading() {
         loadingState.hidden = true;
+      }
+      function applyMirrorState() {
+        if (!liveVideo) return;
+        liveVideo.style.transform = mirrorEnabled ? 'scaleX(-1)' : '';
       }
 
       function renderResult(payload) {
@@ -396,6 +414,7 @@
           liveVideo.srcObject = videoStream;
           liveVideo.hidden = false;
           liveVideo.play();
+          applyMirrorState();
           cameraPlaceholder.hidden = true;
           analyzeFrameBtn.disabled = false;
         } catch (error) {
@@ -427,7 +446,15 @@
         liveCanvas.width = width;
         liveCanvas.height = height;
         const context = liveCanvas.getContext('2d');
+        context.save();
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.clearRect(0, 0, width, height);
+        if (mirrorEnabled) {
+          context.translate(width, 0);
+          context.scale(-1, 1);
+        }
         context.drawImage(liveVideo, 0, 0, width, height);
+        context.restore();
         resetResult();
         await new Promise(function(resolve, reject) {
           liveCanvas.toBlob(function(blob) {
@@ -445,6 +472,12 @@
 
       uploadBtn.addEventListener('click', function() { setActiveMode('upload'); });
       cameraBtn.addEventListener('click', function() { setActiveMode('camera'); });
+      toggleMirrorBtn.addEventListener('click', function() {
+        mirrorEnabled = !mirrorEnabled;
+        toggleMirrorBtn.setAttribute('aria-pressed', String(mirrorEnabled));
+        toggleMirrorBtn.textContent = mirrorEnabled ? 'Mirror On' : 'Mirror Off';
+        applyMirrorState();
+      });
       startCameraBtn.addEventListener('click', startCamera);
       analyzeFrameBtn.addEventListener('click', analyzeCameraFrame);
       window.addEventListener('beforeunload', stopCamera);

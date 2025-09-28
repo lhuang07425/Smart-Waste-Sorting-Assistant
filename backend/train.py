@@ -1,4 +1,4 @@
-﻿"""Fine-tune a ResNet18 model on the TrashNet dataset."""
+"""Fine-tune a ResNet18 model on the TrashNet dataset."""
 from __future__ import annotations
 
 import argparse
@@ -33,11 +33,13 @@ CATEGORY_MAP: Dict[str, str] = {
     "cardboard": "recycle",
     "glass": "recycle",
     "metal": "recycle",
-    "paper": "recycle",
+    "paper": "trash",
     "plastic": "recycle",
     "trash": "trash",
 }
 
+
+FALLBACK_CATEGORY = "recycle"
 
 def resolve_path(path: Path) -> Path:
     return path if path.is_absolute() else (PROJECT_ROOT / path).resolve()
@@ -197,6 +199,7 @@ def train(cfg: TrainConfig) -> None:
                 "class_names": class_names,
                 "category_map": CATEGORY_MAP,
                 "best_val_accuracy": best_val_accuracy,
+                "fallback_category": FALLBACK_CATEGORY,
             }
             meta_path.write_text(json.dumps(meta, indent=2))
             tqdm.write(f"Saved new best model with val_acc={val_acc:.3f}")
@@ -208,6 +211,7 @@ def train(cfg: TrainConfig) -> None:
             "class_names": class_names,
             "category_map": CATEGORY_MAP,
             "best_val_accuracy": best_val_accuracy,
+            "fallback_category": FALLBACK_CATEGORY,
         }
         meta_path.write_text(json.dumps(meta, indent=2))
 
