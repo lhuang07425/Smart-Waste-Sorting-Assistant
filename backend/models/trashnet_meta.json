@@ -1,0 +1,19 @@
+{
+  "class_names": [
+    "cardboard",
+    "glass",
+    "metal",
+    "paper",
+    "plastic",
+    "trash"
+  ],
+  "category_map": {
+    "cardboard": "recycle",
+    "glass": "recycle",
+    "metal": "recycle",
+    "paper": "recycle",
+    "plastic": "recycle",
+    "trash": "trash"
+  },
+  "best_val_accuracy": 0.8752475247524752
+}

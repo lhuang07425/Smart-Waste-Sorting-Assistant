@@ -1,0 +1,455 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart Waste Sorting Assistant</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f5f7;
+      --panel: #ffffff;
+      --text: #1f2933;
+      --accent: #2563eb;
+      --border: #d0d5dd;
+      --compost: #22c55e;
+      --recycle: #0ea5e9;
+      --trash: #6b7280;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+    main {
+      width: min(700px, 100%);
+      padding: 24px clamp(16px, 4vw, 32px) 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 5vw, 2.2rem);
+    }
+    p.subtitle {
+      margin: 0;
+      font-size: clamp(1rem, 3.3vw, 1.1rem);
+      color: #475467;
+    }
+    .panels {
+      background: var(--panel);
+      border-radius: 20px;
+      padding: clamp(20px, 4vw, 32px);
+      box-shadow: 0 20px 45px -30px rgba(15, 23, 42, 0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .mode-switch {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .mode-switch button {
+      padding: 14px;
+      border: none;
+      background: transparent;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #475467;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .mode-switch button.active {
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--accent);
+    }
+    .mode {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .mode.active {
+      display: flex;
+    }
+    .upload-card, .camera-card {
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      background: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      text-align: center;
+    }
+    input[type=file] {
+      width: 100%;
+    }
+    .preview {
+      width: min(360px, 100%);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #111827;
+      aspect-ratio: 4 / 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview img, .preview canvas, .preview video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+    button.primary {
+      background: var(--accent);
+      color: white;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      width: 100%;
+      max-width: 260px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    button.primary:active {
+      transform: scale(0.98);
+    }
+    button.primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .result {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-height: 120px;
+    }
+    .label {
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 700;
+      padding: 10px 26px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      background: #e5e7eb;
+      color: #111827;
+      min-width: 240px;
+      justify-content: center;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .label span.emoji {
+      font-size: 2.4rem;
+    }
+    .label.recycle { background: rgba(14, 165, 233, 0.15); color: #0369a1; }
+    .label.compost { background: rgba(34, 197, 94, 0.15); color: #047857; }
+    .label.trash { background: rgba(107, 114, 128, 0.18); color: #374151; }
+    .confidence {
+      font-size: 0.95rem;
+      color: #475467;
+      text-align: center;
+    }
+    .loading {
+      font-size: 1.05rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .loading::before {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(37, 99, 235, 0.4);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .tips {
+      font-size: 0.95rem;
+      color: #64748b;
+      background: #e2e8f0;
+      padding: 14px 16px;
+      border-radius: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --panel: #111c3a;
+        --text: #e2e8f0;
+        --border: #1e293b;
+      }
+      body { background: radial-gradient(circle at top, #172554, #0f172a 45%); }
+      .panels { box-shadow: 0 24px 52px -40px rgba(15, 23, 42, 0.9); }
+      .upload-card, .camera-card { background: rgba(15, 23, 42, 0.6); border-color: rgba(148, 163, 184, 0.2); }
+      .tips { background: rgba(148, 163, 184, 0.1); color: #cbd5f5; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Smart Waste Sorting Assistant</h1>
+      <p class="subtitle">Snap or upload an item to find out where it belongs: recycle, compost, or trash.</p>
+    </header>
+
+    <section class="panels">
+      <div class="mode-switch" role="tablist">
+        <button id="uploadModeBtn" class="active" role="tab" aria-selected="true">Photo Upload</button>
+        <button id="cameraModeBtn" role="tab" aria-selected="false">Live Camera</button>
+      </div>
+
+      <section id="uploadMode" class="mode active" aria-labelledby="uploadModeBtn" role="tabpanel">
+        <div class="upload-card">
+          <p>Choose a photo of the item or take a quick snap using your device.</p>
+          <input id="fileInput" type="file" accept="image/*" capture="environment" />
+          <div class="preview" aria-live="polite">
+            <img id="uploadPreview" alt="Item preview" hidden />
+            <span id="uploadPlaceholder">No photo selected yet</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="cameraMode" class="mode" aria-labelledby="cameraModeBtn" role="tabpanel">
+        <div class="camera-card">
+          <p>Hold the item in front of your camera and tap analyze when ready.</p>
+          <div class="preview">
+            <video id="liveVideo" playsinline autoplay muted hidden></video>
+            <canvas id="liveCanvas" hidden></canvas>
+            <span id="cameraPlaceholder">Camera is off</span>
+          </div>
+          <button id="startCamera" class="primary">Start Camera</button>
+          <button id="analyzeFrame" class="primary" disabled>Analyze Frame</button>
+        </div>
+      </section>
+
+      <div class="result" aria-live="polite">
+        <div id="resultLabel" class="label" hidden>
+          <span class="emoji" aria-hidden="true"></span>
+          <span class="text"></span>
+        </div>
+        <p id="resultConfidence" class="confidence"></p>
+        <div id="loadingState" class="loading" hidden>Contacting model...</div>
+      </div>
+
+      <div class="tips">
+        Tip: good lighting and a clear background make the prediction more reliable.
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function() {
+      const API_BASE_URL = (window.APP_CONFIG && window.APP_CONFIG.apiBaseUrl) || 'http://localhost:8000';
+
+      let videoStream;
+      const uploadBtn = document.getElementById('uploadModeBtn');
+      const cameraBtn = document.getElementById('cameraModeBtn');
+      const uploadMode = document.getElementById('uploadMode');
+      const cameraMode = document.getElementById('cameraMode');
+      const fileInput = document.getElementById('fileInput');
+      const uploadPreview = document.getElementById('uploadPreview');
+      const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+      const startCameraBtn = document.getElementById('startCamera');
+      const analyzeFrameBtn = document.getElementById('analyzeFrame');
+      const liveVideo = document.getElementById('liveVideo');
+      const liveCanvas = document.getElementById('liveCanvas');
+      const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+      const resultLabel = document.getElementById('resultLabel');
+      const resultText = resultLabel.querySelector('.text');
+      const resultEmoji = resultLabel.querySelector('.emoji');
+      const resultConfidence = document.getElementById('resultConfidence');
+      const loadingState = document.getElementById('loadingState');
+
+      const categoryStyles = {
+        recycle: { className: 'recycle', emoji: '♻️', label: 'Recycle' },
+        compost: { className: 'compost', emoji: '🌱', label: 'Compost' },
+        trash: { className: 'trash', emoji: '🗑️', label: 'Trash' }
+      };
+
+      function setActiveMode(mode) {
+        const isUpload = mode === 'upload';
+        uploadBtn.classList.toggle('active', isUpload);
+        uploadBtn.setAttribute('aria-selected', String(isUpload));
+        uploadMode.classList.toggle('active', isUpload);
+        cameraBtn.classList.toggle('active', !isUpload);
+        cameraBtn.setAttribute('aria-selected', String(!isUpload));
+        cameraMode.classList.toggle('active', !isUpload);
+
+        if (isUpload) {
+          stopCamera();
+        }
+      }
+
+      function resetResult() {
+        resultLabel.hidden = true;
+        resultLabel.classList.remove('recycle', 'compost', 'trash');
+        resultText.textContent = '';
+        resultEmoji.textContent = '';
+        resultConfidence.textContent = '';
+      }
+
+      function showLoading(message) {
+        loadingState.textContent = message || 'Contacting model...';
+        loadingState.hidden = false;
+      }
+
+      function hideLoading() {
+        loadingState.hidden = true;
+      }
+
+      function renderResult(payload) {
+        const category = payload && payload.category ? payload.category : 'trash';
+        const info = categoryStyles[category] || categoryStyles.trash;
+        const emoji = payload && payload.emoji ? payload.emoji : info.emoji;
+        const confidence = payload && typeof payload.confidence === 'number' ? payload.confidence : 0;
+        const percent = Math.round(confidence * 100);
+        const reason = payload && payload.reason ? payload.reason : 'No additional details';
+
+        resultLabel.hidden = false;
+        resultLabel.classList.remove('recycle', 'compost', 'trash');
+        resultLabel.classList.add(info.className);
+        resultText.textContent = info.label;
+        resultEmoji.textContent = emoji;
+        resultConfidence.textContent = percent + '% model confidence | ' + reason;
+      }
+
+      function getEndpoint(path) {
+        const trimmed = API_BASE_URL.replace(/\/$/, '');
+        return trimmed + path;
+      }
+
+      async function sendToApi(blob, filename) {
+        showLoading();
+        try {
+          const formData = new FormData();
+          formData.append('file', blob, filename);
+          const response = await fetch(getEndpoint('/classify'), {
+            method: 'POST',
+            body: formData,
+          });
+          if (!response.ok) {
+            let message = 'Request failed with status ' + response.status;
+            try {
+              const detail = await response.json();
+              if (detail && detail.detail) {
+                message = detail.detail;
+              }
+            } catch (err) {
+              // ignore JSON parse errors
+            }
+            throw new Error(message);
+          }
+          const data = await response.json();
+          renderResult(data);
+        } catch (error) {
+          console.error(error);
+          resultConfidence.textContent = (error && error.message) || 'Something went wrong. Please try again.';
+        } finally {
+          hideLoading();
+        }
+      }
+
+      fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files && event.target.files[0];
+        resetResult();
+        if (!file) {
+          uploadPreview.hidden = true;
+          uploadPlaceholder.hidden = false;
+          return;
+        }
+        const imgUrl = URL.createObjectURL(file);
+        uploadPreview.src = imgUrl;
+        uploadPreview.hidden = false;
+        uploadPlaceholder.hidden = true;
+        await new Promise((resolve) => { uploadPreview.onload = () => resolve(); });
+        sendToApi(file, file.name || 'upload.jpg').finally(() => URL.revokeObjectURL(imgUrl));
+      });
+
+      async function startCamera() {
+        if (videoStream) return;
+        try {
+          showLoading('Requesting camera...');
+          videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          liveVideo.srcObject = videoStream;
+          liveVideo.hidden = false;
+          liveVideo.play();
+          cameraPlaceholder.hidden = true;
+          analyzeFrameBtn.disabled = false;
+        } catch (error) {
+          console.error('Camera access denied', error);
+          resetResult();
+          resultConfidence.textContent = 'Camera access was blocked. Please allow permissions or use photo upload.';
+        } finally {
+          hideLoading();
+        }
+      }
+
+      function stopCamera() {
+        if (videoStream) {
+          videoStream.getTracks().forEach(function(track) { track.stop(); });
+          videoStream = null;
+        }
+        liveVideo.hidden = true;
+        cameraPlaceholder.hidden = false;
+        analyzeFrameBtn.disabled = true;
+      }
+
+      async function analyzeCameraFrame() {
+        if (!videoStream) {
+          resultConfidence.textContent = 'Start the camera first.';
+          return;
+        }
+        const width = liveVideo.videoWidth;
+        const height = liveVideo.videoHeight;
+        liveCanvas.width = width;
+        liveCanvas.height = height;
+        const context = liveCanvas.getContext('2d');
+        context.drawImage(liveVideo, 0, 0, width, height);
+        resetResult();
+        await new Promise(function(resolve, reject) {
+          liveCanvas.toBlob(function(blob) {
+            if (!blob) {
+              reject(new Error('Failed to capture frame.'));
+              return;
+            }
+            sendToApi(blob, 'camera-frame.jpg').then(resolve).catch(reject);
+          }, 'image/jpeg', 0.9);
+        }).catch(function(error) {
+          console.error(error);
+          resultConfidence.textContent = error.message;
+        });
+      }
+
+      uploadBtn.addEventListener('click', function() { setActiveMode('upload'); });
+      cameraBtn.addEventListener('click', function() { setActiveMode('camera'); });
+      startCameraBtn.addEventListener('click', startCamera);
+      analyzeFrameBtn.addEventListener('click', analyzeCameraFrame);
+      window.addEventListener('beforeunload', stopCamera);
+    })();
+  </script>
+</body>
+</html>
+
